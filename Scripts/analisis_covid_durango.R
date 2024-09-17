@@ -1,35 +1,49 @@
+# Cargar librerías
 library(readr)
 library(dplyr)
 library(ggplot2)
 
-covidData <- read.csv("Data/Datos_Tarea2.csv")
+# Leer archivo CSV
+archivo <- "Data/Datos_Tarea2.csv"
+if (file.exists(archivo)) {
+  covidData <- read.csv(archivo)
+} else {
+  stop("El archivo no existe, por favor verifica la ruta.")
+}
 
-covidDurango <- covidData %>% filter (ENTIDAD_UM == 10)
+# Filtrar datos para Durango
+covidDurango <- covidData %>% filter(ENTIDAD_UM == 10)
 
-# transformación de variables
+# Transformación de variables
 covidDurango <- covidDurango %>%
-  mutate(SEXO = factor(SEXO, levels = c(1,2, 99),
-                       labels = c("Mujer", "Hombre", "No Especificado")),
-         TIPO_PACIENTE = factor(TIPO_PACIENTE, levels = c(1,2,99),
-                                labels = c("Ambulatorio", "Hospitalizado", "No Especificado")),
-         DIABETES = factor(DIABETES, levels = c(1,2,97,98,99),
-                           labels = c("Si", "No", "No aplica", "Se ignora", "No especificado")),
-         OBESIDAD = factor(OBESIDAD, levels = c(1,2,97,98,99),
-                           labels = c("Si", "No", "No aplica", "Se ignora", "No especificado")),
-         UCI = factor(UCI, levels = c(1,2,97,98,99),
-                      labels = c("Si", "No", "No aplica", "Se ignora", "No especificado")),
-         INTUBADO = factor(INTUBADO, levels = c(1,2,97,98,99),
-                           labels = c("Si", "No", "No aplica", "Se ignora", "No especificado")))
+  mutate(SEXO = factor(SEXO, levels = c(1, 2),
+                       labels = c("Mujer", "Hombre")),
+         TIPO_PACIENTE = factor(TIPO_PACIENTE, levels = c(1, 2),
+                                labels = c("Ambulatorio", "Hospitalizado")),
+         DIABETES = factor(DIABETES, levels = c(1, 2),
+                           labels = c("Si", "No")),
+         OBESIDAD = factor(OBESIDAD, levels = c(1, 2),
+                           labels = c("Si", "No")),
+         UCI = factor(UCI, levels = c(1, 2),
+                      labels = c("Si", "No")),
+         INTUBADO = factor(INTUBADO, levels = c(1, 2),
+                           labels = c("Si", "No")))
+
+# Calcular el total dinámicamente
+total <- nrow(covidDurango)
 
 # Tabla de Frecuencia de la variable SEXO
+Tabla_Sexo <- covidDurango %>%
+  group_by(SEXO) %>%
+  summarise(Frecuencia = n(),
+            Porcentaje = round(Frecuencia / total * 100, 3))
 
-tabla_sexo_df <- as.data.frame(table(covidDurango$SEXO))
-
-tabla_sexo_porcentajes <- prop.table(tabla_sexo) * 100
-
-View(tabla_sexo_porcentajes)
-
-View(tabla_sexo_df)
+# Añadir fila de total
+Tabla_Sexo_Total <- Tabla_Sexo %>%
+  bind_rows(summarise(Tabla_Sexo,
+                      SEXO = "Total", 
+                      Frecuencia = sum(Frecuencia), 
+                      Porcentaje = round(sum(Frecuencia) / total * 100, 3)))
 
 # Diagrama de Barras de la variable TIPO_PACIENTE
 tabla_tipo_paciente_df <- as.data.frame(table(covidDurango$TIPO_PACIENTE))
@@ -108,9 +122,15 @@ tabla_diabetes <- ggplot(tabla_diabetes_df, aes(x = Var1, y = Freq, fill = Var1)
 ggsave(filename = "Exports/diagrama_diabetes.jpg", plot = tabla_diabetes, width = 10, height = 6, units = "in")
 
 # Tabla de Frecuencias de personas con Obesidad
-
-tabla_obesidad <- table(covidDurango$OBESIDAD)
-View(tabla_obesidad)
+covidDurango  %>% 
+  group_by(OBESIDAD) %>% 
+  summarise(Frecuencia = n(),
+            Porcentaje = round(Frecuencia / 26503 * 100, 3)) -> Tabla_Obesidad
+Tabla_Obesidad_Total <- Tabla_Obesidad %>%
+  bind_rows(summarise(Tabla_Obesidad,
+                      OBESIDAD = "Total", 
+                      Frecuencia = sum(Frecuencia), 
+                      Porcentaje = round(sum(Frecuencia) / 26503 * 100, 3)))
 
 
 # Diagrama de barras de la variable UCI (Unidad de Cuidados Intensivos)
@@ -139,4 +159,42 @@ tabla_intubado <- ggplot(tabla_intubado_df, aes(x = Var1, y = Freq, fill = Var1)
        y = "Frecuencia") +
   theme_minimal() +
   theme(legend.position = "none")
- 
+
+# Tabla de doble entrada para SEXO y TIPO_PACIENTE
+tabla_sexo_tipo_paciente <- table(covidDurango$SEXO, covidDurango$TIPO_PACIENTE)
+total_sexo_tipo_paciente <- sum(tabla_sexo_tipo_paciente)  # Total de casos
+
+# Calcular porcentajes
+porcentajes_sexo_tipo_paciente <- prop.table(tabla_sexo_tipo_paciente) * 100  # Porcentajes sobre el total
+
+# Mostrar la tabla de frecuencias absolutas y porcentajes
+cat("Tabla de SEXO y TIPO_PACIENTE (frecuencias absolutas):\n")
+print(tabla_sexo_tipo_paciente)
+cat("\nTabla de SEXO y TIPO_PACIENTE (porcentajes):\n")
+print(round(porcentajes_sexo_tipo_paciente, 2))
+
+# Tabla de doble entrada para SEXO y DIABETES
+tabla_sexo_diabetes <- table(covidDurango$SEXO, covidDurango$DIABETES)
+total_sexo_diabetes <- sum(tabla_sexo_diabetes)  # Total de casos
+
+# Calcular porcentajes
+porcentajes_sexo_diabetes <- prop.table(tabla_sexo_diabetes) * 100  # Porcentajes sobre el total
+
+# Mostrar la tabla de frecuencias absolutas y porcentajes
+cat("\nTabla de SEXO y DIABETES (frecuencias absolutas):\n")
+print(tabla_sexo_diabetes)
+cat("\nTabla de SEXO y DIABETES (porcentajes):\n")
+print(round(porcentajes_sexo_diabetes, 2))
+
+# Tabla de doble entrada para TIPO_PACIENTE y OBESIDAD
+tabla_paciente_obesidad <- table(covidDurango$TIPO_PACIENTE, covidDurango$OBESIDAD)
+total_paciente_obesidad <- sum(tabla_paciente_obesidad)  # Total de casos
+
+# Calcular porcentajes
+porcentajes_paciente_obesidad <- prop.table(tabla_paciente_obesidad) * 100  # Porcentajes sobre el total
+
+# Mostrar la tabla de frecuencias absolutas y porcentajes
+cat("\nTabla de TIPO_PACIENTE y OBESIDAD (frecuencias absolutas):\n")
+print(tabla_paciente_obesidad)
+cat("\nTabla de TIPO_PACIENTE y OBESIDAD (porcentajes):\n")
+print(round(porcentajes_paciente_obesidad, 2))
