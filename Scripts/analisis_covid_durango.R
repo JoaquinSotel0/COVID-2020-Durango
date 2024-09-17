@@ -1,21 +1,17 @@
 library(readr)
+library(dplyr)
+library(ggplot2)
 
 covidData <- read.csv("Data/Datos_Tarea2.csv")
 
-
-library(dplyr)
-
 covidDurango <- covidData %>% filter (ENTIDAD_UM == 10)
-
-write_csv(covidData, "Exports/COVID19_2020_DURANGO.csv")
-
 
 # transformación de variables
 covidDurango <- covidDurango %>%
-  mutate(SEXO = factor(SEXO, levels = c(1,2),
-                       labels = c("Mujer", "Hombre")),
-         TIPO_PACIENTE = factor(TIPO_PACIENTE, levels = c(1,2),
-                                labels = c("Ambulatorio", "Hospitalizado")),
+  mutate(SEXO = factor(SEXO, levels = c(1,2, 99),
+                       labels = c("Mujer", "Hombre", "No Especificado")),
+         TIPO_PACIENTE = factor(TIPO_PACIENTE, levels = c(1,2,99),
+                                labels = c("Ambulatorio", "Hospitalizado", "No Especificado")),
          DIABETES = factor(DIABETES, levels = c(1,2,97,98,99),
                            labels = c("Si", "No", "No aplica", "Se ignora", "No especificado")),
          OBESIDAD = factor(OBESIDAD, levels = c(1,2,97,98,99),
@@ -27,51 +23,51 @@ covidDurango <- covidDurango %>%
 
 # Tabla de Frecuencia de la variable SEXO
 
-tabla_sexo <- table(covidDurango$SEXO)
-
-tabla_sexo_df <- as.data.frame(tabla_sexo)
+tabla_sexo_df <- as.data.frame(table(covidDurango$SEXO))
 
 tabla_sexo_porcentajes <- prop.table(tabla_sexo) * 100
 
+View(tabla_sexo_porcentajes)
 
+View(tabla_sexo_df)
 
 # Diagrama de Barras de la variable TIPO_PACIENTE
 tabla_tipo_paciente_df <- as.data.frame(table(covidDurango$TIPO_PACIENTE))
-
-library(ggplot2)
 
 tipo_paciente <- ggplot(tabla_tipo_paciente_df, aes(x = Var1, y = Freq, fill = Var1)) +
   geom_bar(stat = "identity") +
   labs(title = "Diagrama de Barras: Tipo de Paciente",
        x = "Tipo de Paciente",
        y = "Frecuencia") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
 
 ggsave(filename = "Exports/diagrama_tipo_paciente.jpg", plot = tipo_paciente, width = 10, height = 6, units = "in")
 
 
 # Histograma de la variable FECHA_SINTOMAS
-library(ggplot2)
 covidDurango$FECHA_SINTOMAS <- as.Date(covidDurango$FECHA_SINTOMAS, format = "%Y-%m-%d")
 
-ggplot(covidDurango, aes(x = FECHA_SINTOMAS)) +
-  geom_histogram(fill = "#68228B", color = "black", binwidth = 7) +  # Agrupar por semanas
+histograma_fecha_sintomas <- ggplot(covidDurango, aes(x = FECHA_SINTOMAS)) +
+  geom_histogram(fill = "#68228B", color = "black", binwidth = 7) + 
   labs(title = "Histograma de la Fecha de Síntomas por meses",
        x = "Fecha de Síntomas",
        y = "Personas con Sintomas") +
-  scale_x_date(date_breaks = "1 month",  # Etiquetas por mes
-               date_labels = "%b %Y",    # Mostrar nombre del mes y el año
-               limits = as.Date(c("2020-01-01", "2020-12-31"))) +  # Limitar el rango de fechas a 2020
+  scale_x_date(date_breaks = "1 month", 
+               date_labels = "%b %Y",    
+               limits = as.Date(c("2020-01-01", "2020-12-31"))) +  
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),  # Centrar el título
-        axis.text.x = element_text(angle = 45, hjust = 1))  # Rotar etiquetas en el eje X
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 45, hjust = 1))  
+
+ggsave(filename = "Exports/histograma_fecha_sintomas.jpg", plot = histograma_fecha_sintomas, width = 10, height = 6, units = "in")
 
 # Histograma de la variable FECHA_DEF
 
 covidDurango$FECHA_DEF <- as.Date(covidDurango$FECHA_DEF, format="%Y-%m-%d")
 covidDurango_def <- subset(covidDurango, !is.na(FECHA_DEF))
 
-ggplot(covidDurango_def, aes(x = FECHA_DEF)) +
+histograma_fecha_def <- ggplot(covidDurango_def, aes(x = FECHA_DEF)) +
   geom_histogram(fill = "lightcoral", color = "black", binwidth = 7) +  
   labs(title = "Distribución de la Fecha de Defunción",
        x = "Fecha de Defunción",
@@ -81,6 +77,8 @@ ggplot(covidDurango_def, aes(x = FECHA_DEF)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5),  
         axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(filename = "Exports/histograma_fecha_def.jpg", plot = histograma_fecha_def, width = 10, height = 6, units = "in")
 
 # Medidas de tendencia Central de la variable EDAD
 
@@ -97,8 +95,6 @@ Edad <- covidDurango %>%
 View(Edad)
 
 # Diagrama de barras de la variable DIABETES
-library(ggplot2)
-
 tabla_diabetes_df <- as.data.frame(table(covidDurango$DIABETES))
 
 tabla_diabetes <- ggplot(tabla_diabetes_df, aes(x = Var1, y = Freq, fill = Var1)) +
@@ -106,7 +102,8 @@ tabla_diabetes <- ggplot(tabla_diabetes_df, aes(x = Var1, y = Freq, fill = Var1)
   labs(title = "Diagrama de Barras: Personas con Diabetes",
        x = "Diabetes",
        y = "Frecuencia") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
 
 ggsave(filename = "Exports/diagrama_diabetes.jpg", plot = tabla_diabetes, width = 10, height = 6, units = "in")
 
@@ -116,4 +113,30 @@ tabla_obesidad <- table(covidDurango$OBESIDAD)
 View(tabla_obesidad)
 
 
-# 
+# Diagrama de barras de la variable UCI (Unidad de Cuidados Intensivos)
+
+tabla_uci_df <- as.data.frame(table(covidDurango$UCI))
+
+tabla_uci <- ggplot(tabla_uci_df, aes(x = Var1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Diagrama de Barras: Personas que fueron a Cuidados Intensivos",
+       x = "UCI",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave(filename = "Exports/diagrama_uci.jpg", plot = tabla_uci, width = 10, height = 6, units = "in")
+
+
+# Diagrama de barras de la variable Intubado
+
+tabla_intubado_df <- as.data.frame(table(covidDurango$INTUBADO))
+
+tabla_intubado <- ggplot(tabla_intubado_df, aes(x = Var1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Diagrama de Barras: Personas intubadas",
+       x = "Intubados",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none")
+ 
